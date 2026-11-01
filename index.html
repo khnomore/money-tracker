@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="script-src 'unsafe-inline'; connect-src 'none'; object-src 'none'; base-uri 'none'">
+<title>My Money Tracker</title>
+<style>
+:root{--bg:#f3f6f8;--card:#fff;--ink:#14232e;--mute:#62747f;--line:#dde4e9;--in:#0f9d74;--out:#d9534f;--acc:#1d4e89;--accbg:#e6eef7}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0e161c;--card:#16212a;--ink:#e8eef2;--mute:#8da0ad;--line:#26343e;--in:#35c79a;--out:#ff7b75;--acc:#6fa8e8;--accbg:#1b2d40}}
+:root[data-theme=dark]{--bg:#0e161c;--card:#16212a;--ink:#e8eef2;--mute:#8da0ad;--line:#26343e;--in:#35c79a;--out:#ff7b75;--acc:#6fa8e8;--accbg:#1b2d40}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+h1{font-size:22px;margin:0}
+h2{font-size:16px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:12px}
+.kpi small{color:var(--mute);display:block}
+.kpi b{font-size:24px;font-variant-numeric:tabular-nums}
+.in{color:var(--in)}.out{color:var(--out)}
+.two{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-bottom:12px}
+label{display:block;font-size:13px;color:var(--mute);margin-bottom:3px}
+input,select,button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;max-width:100%}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.form{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:end}
+.form>div>*{width:100%}
+button{cursor:pointer}
+button.pri{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) button.pri{color:#0e161c}}
+:root[data-theme=dark] button.pri{color:#0e161c}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-bottom:10px}
+.bar>div{flex:1 1 130px}.bar>div>*{width:100%}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.n,th.n{text-align:right}
+td.note{white-space:normal;color:var(--mute)}
+.pill{padding:2px 8px;border-radius:99px;background:var(--accbg);font-size:12px}
+.act button{padding:3px 8px;font-size:13px}
+.empty{color:var(--mute);padding:18px;text-align:center}
+.donutbox{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.donut{width:150px;height:150px;border-radius:50%;flex:none;position:relative}
+.donut::after{content:"";position:absolute;inset:32px;background:var(--card);border-radius:50%}
+.legend{flex:1;min-width:150px;font-size:14px}
+.legend div{display:flex;justify-content:space-between;gap:8px;padding:2px 0}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.bars{display:flex;align-items:flex-end;gap:3px;height:150px;border-bottom:1px solid var(--line)}
+.bars div{flex:1;background:var(--out);border-radius:3px 3px 0 0;min-height:1px}
+.bars div.i{background:var(--in)}
+.axis{display:flex;justify-content:space-between;color:var(--mute);font-size:12px;margin-top:4px}
+.tools{display:flex;gap:6px;flex-wrap:wrap}
+details{margin-top:10px}summary{cursor:pointer;color:var(--acc)}
+#planOut p{margin:8px 0}
+body.locked .wrap{display:none}
+#lock{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;z-index:99}
+#lock[hidden]{display:none}
+#lock input{width:100%}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+</style>
+</head>
+<body class="locked">
+<div id="lock" hidden><div class="card" style="width:100%;max-width:360px">
+  <h1 style="margin-bottom:4px">My Money Tracker</h1>
+  <p id="lockMsg" style="color:var(--mute);margin:0 0 12px"></p>
+  <div id="lw1"><label id="l1" for="pin"></label><input type="password" id="pin" autocomplete="off"></div>
+  <div id="lw2" style="margin-top:8px"><label id="l2" for="pin2"></label><input type="password" id="pin2" autocomplete="off"></div>
+  <div id="lw3" style="margin-top:8px"><label id="l3" for="pin3"></label><input type="password" id="pin3" autocomplete="off"></div>
+  <p id="lockErr" class="out" role="alert" style="min-height:1.4em;margin:8px 0"></p>
+  <button class="pri" id="lockGo" style="width:100%"></button>
+  <button id="lockAlt" style="width:100%;margin-top:8px" hidden></button>
+</div></div>
+<div class="wrap">
+<header>
+  <h1>My Money Tracker</h1>
+  <div class="tools">
+    <button id="exportCsv">Export CSV</button>
+    <button id="importBtn">Import CSV</button>
+    <button id="backup">Backup (JSON)</button>
+    <button id="theme">Light/Dark</button>
+    <button id="lockNow">Lock now</button>
+    <button id="chgPin">Change passcode</button>
+    <input type="file" id="file" accept=".csv,.json" hidden>
+  </div>
+</header>
+
+<section class="card" style="margin-bottom:12px">
+  <h2 id="formTitle">Add entry</h2>
+  <div class="grid form">
+    <div><label for="fType">Type</label><select id="fType"><option value="expense">Expense</option><option value="salary">Salary</option><option value="income">Other income</option></select></div>
+    <div><label for="fDate">Date</label><input type="date" id="fDate"></div>
+    <div><label for="fCat">Category</label><select id="fCat"></select></div>
+    <div><label for="fAmt">Amount</label><input type="number" id="fAmt" min="0" step="0.01" placeholder="0.00" inputmode="decimal"></div>
+    <div><label for="fNote">Note</label><input id="fNote" placeholder="Optional"></div>
+    <div><button class="pri" id="save">Add entry</button></div>
+  </div>
+  <div class="tools" style="margin-top:8px"><button id="cancel" hidden>Cancel edit</button><span id="msg" class="empty" style="padding:0;margin-left:4px"></span></div>
+</section>
+
+<section class="grid kpis">
+  <div class="card kpi"><small>Income</small><b class="in" id="kIn">0</b></div>
+  <div class="card kpi"><small>Expenses</small><b class="out" id="kOut">0</b></div>
+  <div class="card kpi"><small>Balance</small><b id="kBal">0</b></div>
+  <div class="card kpi"><small>Saved</small><b id="kRate">0%</b></div>
+</section>
+
+<section class="grid two">
+  <div class="card"><h2>Spending by category</h2><div class="donutbox"><div class="donut" id="donut"></div><div class="legend" id="legend"></div></div></div>
+  <div class="card"><h2>Daily spending</h2><div class="bars" id="bars"></div><div class="axis"><span>1</span><span id="axisEnd"></span></div></div>
+</section>
+
+<section class="card">
+  <h2>Entries</h2>
+  <div class="bar">
+    <div><label for="xMonth">Month</label><input type="month" id="xMonth"></div>
+    <div><label for="xType">Type</label><select id="xType"><option value="">All</option><option value="expense">Expense</option><option value="salary">Salary</option><option value="income">Other income</option></select></div>
+    <div><label for="xCat">Category</label><select id="xCat"></select></div>
+    <div><label for="xSearch">Search</label><input id="xSearch" placeholder="Search notes"></div>
+    <div style="flex:0 0 auto"><label for="cur">Currency</label><input id="cur" size="4" style="width:80px"></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Note</th><th class="n">Amount</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+</section>
+
+<section class="card" style="margin-top:12px">
+  <h2>Loans and payoff plan</h2>
+  <div class="grid form">
+    <div><label for="lName">Loan name</label><input id="lName" placeholder="Car loan, bank, friend"></div>
+    <div><label for="lOwed">Amount still owed</label><input type="number" id="lOwed" min="0" step="0.01" inputmode="decimal"></div>
+    <div><label for="lRate">Yearly interest % (0 if none)</label><input type="number" id="lRate" min="0" step="0.01" value="0"></div>
+    <div><label for="lMin">Required monthly payment</label><input type="number" id="lMin" min="0" step="0.01" inputmode="decimal"></div>
+    <div><button class="pri" id="lAdd">Add loan</button></div>
+  </div>
+  <div class="tw" style="margin-top:10px"><table>
+    <thead><tr><th>Loan</th><th class="n">Still owed</th><th class="n">Interest</th><th class="n">Required monthly</th><th></th></tr></thead>
+    <tbody id="lRows"></tbody>
+  </table></div>
+  <p class="empty" style="padding:6px 0;text-align:left">Use Record payment so the balance goes down and the payment counts as an expense.</p>
+  <div class="bar">
+    <div><label for="lBudget">Monthly amount I can put toward loans</label><input type="number" id="lBudget" min="0" step="0.01" inputmode="decimal"></div>
+    <div><label for="lTarget">I want to be debt-free in (months)</label><input type="number" id="lTarget" min="1" max="120" value="12"></div>
+  </div>
+  <div id="planOut"></div>
+</section>
+</div>
+
+<script>
+(function(){
+var KEY="moneyTracker.v1";
+var CATS=["Salary","Rent","Groceries","Transport","Bills","Dining","Shopping","Health","Entertainment","Savings","Loan payment","Other"];
+var COLORS=["#1d4e89","#0f9d74","#e0a030","#d9534f","#7b61c4","#2aa5c9","#c0568a","#6c8a3a","#9a6b3f","#4a5d6b","#8a4fff","#b0b8bf"];
+var S={items:[],cur:"AED",theme:"",loans:[]};
+
+var editId=null;
+var $=function(id){return document.getElementById(id)};
+var ck=null,chain=Promise.resolve(),te=new TextEncoder(),td=new TextDecoder();
+function b64(buf){var a=new Uint8Array(buf),t="";for(var i=0;i<a.length;i++)t+=String.fromCharCode(a[i]);return btoa(t)}
+function unb64(t){var b=atob(t),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
+function derive(pin,salt){return crypto.subtle.importKey("raw",te.encode(pin),"PBKDF2",false,["deriveKey"]).then(function(k){return crypto.subtle.deriveKey({name:"PBKDF2",salt:salt,iterations:310000,hash:"SHA-256"},k,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])})}
+function encrypt(obj){var iv=crypto.getRandomValues(new Uint8Array(12));return crypto.subtle.encrypt({name:"AES-GCM",iv:iv},ck,te.encode(JSON.stringify(obj))).then(function(c){return b64(iv)+"."+b64(c)})}
+function decrypt(str,key){var p=str.split(".");return crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(p[0])},key,unb64(p[1])).then(function(b){return JSON.parse(td.decode(b))})}
+function persist(){return encrypt(S).then(function(x){localStorage.setItem("mt.data",x)})}
+function save(){if(!ck)return;chain=chain.then(persist).catch(function(){say("Could not save. Use Backup to keep your data.")})}
+function say(t){$("msg").textContent=t;if(t)setTimeout(function(){if($("msg").textContent===t)$("msg").textContent=""},3500)}
+function money(n){return Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+" "+S.cur}
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function fill(sel,list,all){sel.innerHTML=(all?'<option value="">All</option>':"")+list.map(function(c){return'<option>'+c+'</option>'}).join("")}
+
+fill($("fCat"),CATS);fill($("xCat"),CATS,true);
+$("fDate").value=today();$("xMonth").value=today().slice(0,7);$("cur").value=S.cur;
+if(S.theme)document.documentElement.setAttribute("data-theme",S.theme);
+
+$("fType").onchange=function(){if(this.value==="salary")$("fCat").value="Salary"};
+$("save").onclick=function(){
+  var amt=parseFloat($("fAmt").value);
+  if(!$("fDate").value){say("Pick a date.");return}
+  if(!(amt>0)){say("Enter an amount above zero.");return}
+  var it={id:editId||Date.now()+Math.random().toString(36).slice(2,6),type:$("fType").value,date:$("fDate").value,cat:$("fCat").value,amt:amt,note:$("fNote").value.trim()};
+  if(editId){var old=S.items.filter(function(x){return x.id===editId})[0];
+    if(old&&old.loan){it.loan=old.loan;var lo=lq(old.loan);if(lo)lo.owed=Math.max(0,lo.owed+old.amt-it.amt)}
+    S.items=S.items.map(function(x){return x.id===editId?it:x})}else{S.items.push(it)}
+  say(editId?"Entry updated.":"Entry added.");
+  resetForm();save();render();
+};
+$("cancel").onclick=resetForm;
+function resetForm(){editId=null;$("fAmt").value="";$("fNote").value="";$("formTitle").textContent="Add entry";$("save").textContent="Add entry";$("cancel").hidden=true}
+["xMonth","xType","xCat","xSearch"].forEach(function(id){$(id).oninput=render});
+$("cur").oninput=function(){S.cur=this.value.trim()||"AED";save();render()};
+$("theme").onclick=function(){var dark=getComputedStyle(document.body).backgroundColor==="rgb(14, 22, 28)";S.theme=dark?"light":"dark";document.documentElement.setAttribute("data-theme",S.theme);save()};
+
+function filtered(){
+  var m=$("xMonth").value,t=$("xType").value,c=$("xCat").value,q=$("xSearch").value.toLowerCase();
+  return S.items.filter(function(x){return(!m||x.date.slice(0,7)===m)&&(!t||x.type===t)&&(!c||x.cat===c)&&(!q||(x.note+" "+x.cat).toLowerCase().indexOf(q)>-1)}).sort(function(a,b){return b.date.localeCompare(a.date)});
+}
+function render(){
+  var list=filtered(),inc=0,out=0,byCat={};
+  list.forEach(function(x){if(x.type==="expense"){out+=x.amt;byCat[x.cat]=(byCat[x.cat]||0)+x.amt}else inc+=x.amt});
+  $("kIn").textContent=money(inc);$("kOut").textContent=money(out);
+  var bal=inc-out;$("kBal").textContent=money(bal);$("kBal").className=bal<0?"out":"in";
+  $("kRate").textContent=inc>0?Math.round(bal/inc*100)+"%":"0%";
+  // donut
+  var cats=Object.keys(byCat).sort(function(a,b){return byCat[b]-byCat[a]}),acc=0,stops=[];
+  cats.forEach(function(c,i){var p=byCat[c]/out*100;stops.push(COLORS[CATS.indexOf(c)%COLORS.length]+" "+acc+"% "+(acc+p)+"%");acc+=p});
+  $("donut").style.background=cats.length?"conic-gradient("+stops.join(",")+")":"var(--line)";
+  $("legend").innerHTML=cats.length?cats.map(function(c){return'<div><span><i class="dot" style="background:'+COLORS[CATS.indexOf(c)%COLORS.length]+'"></i>'+esc(c)+'</span><span>'+Math.round(byCat[c]/out*100)+'%</span></div>'}).join(""):'<div class="empty">No spending yet.</div>';
+  // daily bars
+  var m=$("xMonth").value||today().slice(0,7),y=+m.slice(0,4),mo=+m.slice(5),days=new Date(y,mo,0).getDate(),d=[],max=1;
+  for(var i=0;i<days;i++)d.push(0);
+  S.items.forEach(function(x){if(x.type==="expense"&&x.date.slice(0,7)===m)d[+x.date.slice(8)-1]+=x.amt});
+  d.forEach(function(v){if(v>max)max=v});
+  $("bars").innerHTML=d.map(function(v,i){return'<div title="Day '+(i+1)+": "+v.toFixed(2)+'" style="height:'+(v/max*100)+'%"></div>'}).join("");
+  $("axisEnd").textContent=days;renderLoans();
+  // rows
+  $("rows").innerHTML=list.length?list.map(function(x){
+    return'<tr><td>'+x.date+'</td><td><span class="pill">'+x.type+'</span></td><td>'+esc(x.cat)+'</td><td class="note">'+esc(x.note)+'</td><td class="n '+(x.type==="expense"?"out":"in")+'">'+(x.type==="expense"?"-":"+")+money(x.amt)+'</td><td class="act"><button data-e="'+x.id+'">Edit</button> <button data-d="'+x.id+'">Delete</button></td></tr>'
+  }).join(""):'<tr><td colspan="6" class="empty">No entries for these filters. Add one above.</td></tr>';
+}
+$("rows").onclick=function(e){
+  var id=e.target.getAttribute("data-d");
+  if(id){if(confirm("Delete this entry?")){var gone=S.items.filter(function(x){return x.id===id})[0];
+      if(gone&&gone.loan){var lo=lq(gone.loan);if(lo)lo.owed+=gone.amt}
+      S.items=S.items.filter(function(x){return x.id!==id});save();render()}return}
+  id=e.target.getAttribute("data-e");
+  if(id){var x=S.items.filter(function(i){return i.id===id})[0];editId=id;
+    $("fType").value=x.type;$("fDate").value=x.date;$("fCat").value=x.cat;$("fAmt").value=x.amt;$("fNote").value=x.note;
+    $("formTitle").textContent="Edit entry";$("save").textContent="Save changes";$("cancel").hidden=false;window.scrollTo({top:0,behavior:"smooth"})}
+};
+
+function download(name,text,type){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:type}));a.download=name;a.click();say("File saved. It is not encrypted, so keep it private.");setTimeout(function(){URL.revokeObjectURL(a.href)},1000)}
+function q(s){s=String(s);return/[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
+$("exportCsv").onclick=function(){
+  var l=filtered().slice().reverse();if(!l.length){say("Nothing to export for these filters.");return}
+  download("money-"+($("xMonth").value||"all")+".csv","Date,Type,Category,Amount,Note\n"+l.map(function(x){return[x.date,x.type,q(x.cat),x.amt,q(x.note)].join(",")}).join("\n"),"text/csv");
+};
+$("backup").onclick=function(){download("money-backup-"+today()+".json",JSON.stringify(S,null,2),"application/json")};
+$("importBtn").onclick=function(){$("file").click()};
+function parseCsv(t){var rows=[],r=[],c="",inq=false;for(var i=0;i<t.length;i++){var ch=t[i];if(inq){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else inq=false}else c+=ch}else if(ch==='"')inq=true;else if(ch===","){r.push(c);c=""}else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t[i+1]==="\n")i++;r.push(c);rows.push(r);r=[];c=""}else c+=ch}if(c||r.length){r.push(c);rows.push(r)}return rows}
+$("file").onchange=function(){
+  var f=this.files[0];if(!f)return;var rd=new FileReader();
+  rd.onload=function(){
+    try{
+      if(/\.json$/i.test(f.name)){var j=JSON.parse(rd.result);if(!Array.isArray(j.items))throw 0;S=Object.assign(S,j)}
+      else{parseCsv(rd.result).slice(1).forEach(function(r){var a=parseFloat(r[3]);if(r[0]&&a>0)S.items.push({id:Date.now()+Math.random().toString(36).slice(2,6),date:r[0],type:["expense","salary","income"].indexOf(r[1])>-1?r[1]:"expense",cat:r[2]||"Other",amt:a,note:r[4]||""})})}
+      save();$("cur").value=S.cur;render();say("Import done.");
+    }catch(e){say("Could not read that file. Use a CSV exported from this app.")}
+  };rd.readAsText(f);this.value="";
+};
+
+/* ---------- Loans ---------- */
+function lq(id){return S.loans.filter(function(l){return l.id===id})[0]}
+function stats(){
+  var mm={};
+  S.items.forEach(function(x){if(x.loan)return;var m=x.date.slice(0,7);mm[m]=mm[m]||{i:0,e:0};if(x.type==="expense")mm[m].e+=x.amt;else mm[m].i+=x.amt});
+  var ks=Object.keys(mm).sort().slice(-3);
+  if(!ks.length)return{n:0,i:0,e:0,free:0};
+  var i=0,e=0;ks.forEach(function(k){i+=mm[k].i;e+=mm[k].e});
+  return{n:ks.length,i:i/ks.length,e:e/ks.length,free:(i-e)/ks.length};
+}
+function monthLabel(n){var d=new Date();d=new Date(d.getFullYear(),d.getMonth()+n,1);return d.toLocaleString(undefined,{month:"short",year:"numeric"})}
+function sim(budget){
+  var L=S.loans.filter(function(l){return l.owed>0.005}).map(function(l){return{b:l.owed,r:(l.rate||0)/1200,min:l.min||0}});
+  L.sort(function(a,b){return b.r-a.r});
+  var rows=[],ti=0,m=0;
+  function open(){return L.some(function(l){return l.b>0.005})}
+  while(open()&&m<600){
+    m++;var left=budget,start=0;
+    L.forEach(function(l){if(l.b<=0.005)return;var i=l.b*l.r;l.b+=i;ti+=i});
+    L.forEach(function(l){if(l.b<=0.005)return;var p=Math.min(l.b,l.min,left);l.b-=p;left-=p});
+    L.forEach(function(l){if(l.b<=0.005||left<=0)return;var p=Math.min(l.b,left);l.b-=p;left-=p});
+    var bal=0;L.forEach(function(l){bal+=Math.max(l.b,0)});
+    rows.push({m:m,paid:budget-left,bal:bal});
+  }
+  return open()?{never:true}:{months:m,interest:ti,rows:rows};
+}
+function needFor(T){
+  var lo=0,hi=1,tot=0;S.loans.forEach(function(l){tot+=l.owed});hi=tot*2+1;
+  for(var i=0;i<40;i++){var mid=(lo+hi)/2,r=sim(mid);if(!r.never&&r.months<=T)hi=mid;else lo=mid}
+  return Math.ceil(hi);
+}
+function renderLoans(){
+  var tot=0,mins=0;
+  S.loans.forEach(function(l){tot+=l.owed;if(l.owed>0.005)mins+=l.min||0});
+  $("lRows").innerHTML=S.loans.length?S.loans.map(function(l){return'<tr><td>'+esc(l.name)+'</td><td class="n">'+money(l.owed)+'</td><td class="n">'+l.rate+'%</td><td class="n">'+money(l.min||0)+'</td><td class="act"><button data-pay="'+l.id+'">Record payment</button> <button data-ld="'+l.id+'">Delete</button></td></tr>'}).join(""):'<tr><td colspan="5" class="empty">No loans yet. Add one above to get a payoff plan.</td></tr>';
+  var st=stats(),sug=Math.max(mins,Math.round(Math.max(st.free,0)*0.5));
+  $("lBudget").placeholder=sug?String(sug):"0";
+  var out=$("planOut");
+  if(tot<=0.005){out.innerHTML=S.loans.length?'<p class="in">All loans are paid off.</p>':"";return}
+  var budget=S.budget>0?S.budget:sug,T=Math.max(1,parseInt($("lTarget").value)||12);
+  var h='<p>Total owed: <b>'+money(tot)+'</b>. ';
+  h+=st.n?'Over your last '+st.n+' month(s) of entries you average '+money(st.i)+' income and '+money(st.e)+' other spending, leaving about <b class="'+(st.free<0?"out":"in")+'">'+money(st.free)+'</b> a month.':'Add your salary and expenses so the plan can use your real numbers.';
+  h+='</p>';
+  var r=sim(budget);
+  if(!(budget>0)){h+='<p class="out">Enter a monthly amount above to see a plan.</p>'}
+  else if(r.never){h+='<p class="out">At '+money(budget)+' a month the loans never shrink, because interest is higher than your payment. Raise the amount.</p>'}
+  else{
+    h+='<p>Paying <b>'+money(budget)+'</b> a month clears everything in <b>'+r.months+' months</b> ('+monthLabel(r.months)+'), with about '+money(r.interest)+' in interest. Extra money goes to the highest-interest loan first.</p>';
+    if(budget<mins)h+='<p class="out">That is below your required monthly payments ('+money(mins)+').</p>';
+    if(st.n&&budget>st.free)h+='<p class="out">That is more than your average free cash. You may need to cut spending or raise income.</p>';
+  }
+  var need=needFor(T);
+  h+='<p>To be debt-free in <b>'+T+' months</b>, pay about <b>'+money(need)+'</b> a month'+(st.free>0?' ('+Math.round(need/st.free*100)+'% of your free cash).':'.')+'</p>';
+  var sc=[["Required payments only",mins],["30% of free cash",st.free*0.3],["50% of free cash",st.free*0.5],["80% of free cash",st.free*0.8]].filter(function(x){return x[1]>0});
+  if(sc.length){
+    h+='<div class="tw"><table><thead><tr><th>Option</th><th class="n">Monthly</th><th class="n">Months</th><th>Done by</th><th class="n">Interest</th></tr></thead><tbody>';
+    sc.forEach(function(x){var q=sim(x[1]);h+='<tr><td>'+x[0]+'</td><td class="n">'+money(x[1])+'</td>'+(q.never?'<td class="n out" colspan="3">Never</td>':'<td class="n">'+q.months+'</td><td>'+monthLabel(q.months)+'</td><td class="n">'+money(q.interest)+'</td>')+'</tr>'});
+    h+='</tbody></table></div>';
+  }
+  if(r.rows){
+    h+='<details><summary>Month-by-month schedule</summary><div class="tw"><table><thead><tr><th>Month</th><th class="n">Pay</th><th class="n">Still owed after</th></tr></thead><tbody>'+r.rows.slice(0,120).map(function(x){return'<tr><td>'+monthLabel(x.m)+'</td><td class="n">'+money(x.paid)+'</td><td class="n">'+money(x.bal)+'</td></tr>'}).join("")+'</tbody></table></div></details>';
+  }
+  out.innerHTML=h;
+}
+$("lAdd").onclick=function(){
+  var n=$("lName").value.trim(),o=parseFloat($("lOwed").value);
+  if(!n){say("Give the loan a name.");return}
+  if(!(o>0)){say("Enter how much you still owe.");return}
+  S.loans.push({id:"L"+Date.now(),name:n,owed:o,rate:Math.max(0,parseFloat($("lRate").value)||0),min:Math.max(0,parseFloat($("lMin").value)||0)});
+  $("lName").value="";$("lOwed").value="";$("lMin").value="";$("lRate").value="0";
+  save();renderLoans();say("Loan added.");
+};
+$("lRows").onclick=function(e){
+  var id=e.target.getAttribute("data-ld");
+  if(id){if(confirm("Delete this loan? Past payment entries stay in your list.")){S.loans=S.loans.filter(function(l){return l.id!==id});save();renderLoans()}return}
+  id=e.target.getAttribute("data-pay");
+  if(id){var l=lq(id),a=parseFloat(prompt("Payment amount for "+l.name,l.min||""));
+    if(!(a>0))return;a=Math.min(a,l.owed);
+    S.items.push({id:Date.now()+Math.random().toString(36).slice(2,6),type:"expense",date:today(),cat:"Loan payment",amt:a,note:"Payment: "+l.name,loan:l.id});
+    l.owed-=a;save();render();say("Payment recorded.")}
+};
+$("lBudget").oninput=function(){S.budget=parseFloat(this.value)||0;save();renderLoans()};
+$("lTarget").oninput=renderLoans;
+if(S.budget>0)$("lBudget").value=S.budget;
+
+/* ---------- Passcode lock ---------- */
+var mode="",busy=false;
+function setMode(m){
+  mode=m;var u=m==="unlock",st=m==="setup",c=m==="change";
+  $("lock").hidden=false;$("lw2").hidden=u;$("lw3").hidden=!c;
+  $("l1").textContent=st?"Create a passcode (8 or more characters)":c?"Current passcode":"Passcode";
+  $("l2").textContent=st?"Repeat passcode":"New passcode (8 or more characters)";
+  $("l3").textContent="Repeat new passcode";
+  $("lockMsg").textContent=st?"Set a passcode to protect your data. If you forget it, the data cannot be recovered, so keep a backup.":c?"Change your passcode.":"Enter your passcode to open.";
+  $("lockGo").textContent=st?"Create passcode":c?"Change passcode":"Unlock";
+  $("lockAlt").hidden=st;$("lockAlt").textContent=c?"Cancel":"Forgot passcode? Erase data";
+  ["pin","pin2","pin3"].forEach(function(i){$(i).value=""});$("lockErr").textContent="";$("pin").focus();
+}
+function boot(){
+  if(!(window.crypto&&crypto.subtle)){$("lock").hidden=false;$("lockMsg").textContent="This browser cannot encrypt data. Open the app from its https address.";$("lw1").hidden=$("lw2").hidden=$("lw3").hidden=$("lockGo").hidden=true;return}
+  setMode(localStorage.getItem("mt.data")?"unlock":"setup");
+}
+function start(){
+  $("lock").hidden=true;document.body.classList.remove("locked");
+  $("cur").value=S.cur;if(S.theme)document.documentElement.setAttribute("data-theme",S.theme);if(S.budget>0)$("lBudget").value=S.budget;
+  render();
+  ["pointerdown","keydown","scroll","touchstart"].forEach(function(e){document.addEventListener(e,arm,{passive:true})});arm();
+  var hiddenAt=0;
+  document.addEventListener("visibilitychange",function(){if(document.hidden)hiddenAt=Date.now();else if(hiddenAt&&Date.now()-hiddenAt>30000)lockNow()});
+}
+var idle;
+function arm(){clearTimeout(idle);idle=setTimeout(lockNow,120000)}
+function lockNow(){chain.then(function(){location.reload()})}
+function fail(){
+  var n=(parseInt(localStorage.getItem("mt.fail"))||0)+1;localStorage.setItem("mt.fail",n);
+  if(n>=5)localStorage.setItem("mt.until",Date.now()+Math.min(3600,30*Math.pow(2,n-5))*1000);
+  $("lockErr").textContent=n>=5?"Wrong passcode. You are locked out for a while.":"Wrong passcode.";
+}
+function check(p){
+  var salt=unb64(localStorage.getItem("mt.salt"));
+  return derive(p,salt).then(function(k){return decrypt(localStorage.getItem("mt.data"),k).then(function(o){return{k:k,o:o}})});
+}
+function newKey(p){var salt=crypto.getRandomValues(new Uint8Array(16));return derive(p,salt).then(function(k){ck=k;localStorage.setItem("mt.salt",b64(salt))})}
+$("lockGo").onclick=function(){
+  if(busy)return;var err=$("lockErr"),p=$("pin").value;err.textContent="";
+  if(mode==="setup"){
+    if(p.length<8){err.textContent="Use at least 8 characters.";return}
+    if(p!==$("pin2").value){err.textContent="The two passcodes don't match.";return}
+    busy=true;err.textContent="Securing...";
+    newKey(p).then(function(){
+      try{var old=localStorage.getItem(KEY);if(old)S=Object.assign(S,JSON.parse(old))}catch(e){}
+      return persist();
+    }).then(function(){localStorage.removeItem(KEY);busy=false;start()}).catch(function(){busy=false;err.textContent="Could not set up encryption."});
+  }else if(mode==="unlock"){
+    var until=parseInt(localStorage.getItem("mt.until"))||0;
+    if(Date.now()<until){err.textContent="Too many attempts. Try again in "+Math.ceil((until-Date.now())/1000)+" seconds.";return}
+    if(!p)return;busy=true;err.textContent="Checking...";
+    check(p).then(function(r){ck=r.k;S=Object.assign(S,r.o);localStorage.removeItem("mt.fail");localStorage.removeItem("mt.until");busy=false;start()}).catch(function(){busy=false;fail()});
+  }else{
+    var np=$("pin2").value;
+    if(np.length<8){err.textContent="Use at least 8 characters for the new passcode.";return}
+    if(np!==$("pin3").value){err.textContent="The new passcodes don't match.";return}
+    busy=true;err.textContent="Checking...";
+    check(p).then(function(){return newKey(np)}).then(persist).then(function(){busy=false;$("lock").hidden=true;say("Passcode changed.")}).catch(function(){busy=false;err.textContent="Current passcode is wrong."});
+  }
+};
+["pin","pin2","pin3"].forEach(function(i){$(i).onkeydown=function(e){if(e.key==="Enter")$("lockGo").click()}});
+$("lockAlt").onclick=function(){
+  if(mode==="change"){$("lock").hidden=true;return}
+  if(confirm("This erases all entries and loans stored in this browser. You can restore from a backup file afterwards. Erase everything?")){
+    ["mt.data","mt.salt","mt.fail","mt.until",KEY].forEach(function(k){localStorage.removeItem(k)});location.reload();
+  }
+};
+$("lockNow").onclick=lockNow;
+$("chgPin").onclick=function(){setMode("change")};
+boot();
+})();
+</script>
+</body>
+</html>
