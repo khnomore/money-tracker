@@ -4,6 +4,8 @@ A single-page app to track daily expenses, salary and other income, with a dashb
 
 ## What it does
 
+- Five pages: Dashboard, Entries, Import statement, Loans, Summary
+- Import bank and credit card statements (CSV) and fill entries automatically
 - Add an entry in a few seconds: type (Expense, Salary, Other income), date, category, amount, optional note
 - Dashboard for the selected month: income, expenses, balance, percent saved, spending-by-category chart, daily spending chart
 - Filter by month, type, category, or search text
@@ -14,6 +16,32 @@ A single-page app to track daily expenses, salary and other income, with a dashb
 - Passcode lock with encrypted data, auto-lock and lockout after wrong tries (see Security)
 - Change the currency label (default AED)
 - Light and dark mode
+
+## Pages
+
+- **Dashboard**: pick a month to see income, expenses, balance, percent saved and loans owed, spending by category, daily spending, the last 6 months, and the largest expenses.
+- **Entries**: add, filter, edit and delete entries, and export CSV.
+- **Import statement**: upload a bank or credit card statement (see below).
+- **Loans**: loan list and payoff plan.
+- **Summary**: totals by month, by category and by source for the last 12 months, a year, or all time. Export it as CSV or use **Print or save as PDF**.
+
+## Importing statements
+
+1. Get a CSV file. In your bank's website or app, download the account or card statement as **CSV**. If you only have Excel, open it and use Save As, CSV. PDF statements cannot be read.
+2. On **Import statement**, choose **Bank account** or **Credit card**, then pick the file (or paste the rows).
+3. The app finds the date, description and amount columns. Check them in **Check the columns**. If your file has separate Debit and Credit columns it switches to that automatically. Fix the date order (day first or month first) if the dates look wrong.
+4. Review the list. Each row gets a category guessed from the description (Carrefour is Groceries, Careem is Transport, and so on). Change a category and the app remembers it for similar descriptions next time. Untick rows you don't want.
+5. Click **Import**. The entries are tagged Bank or Card.
+
+The app skips these by default so numbers aren't counted twice, and you can tick them back on:
+- A payment to your credit card from your bank account, and the matching "payment received" line on the card statement.
+- Rows already in the app (same date, amount and direction).
+
+Use **Import history** to undo a whole import. Statement files are read in your browser and are never uploaded. Only the entries are kept, encrypted with your passcode.
+
+**Test file:** `sample_emirates_islamic_oct2026.csv` is a CSV version of an Emirates Islamic card statement. Import it as a **Credit card** statement to try the feature. The bank's own PDF has no selectable text (the words are drawn as shapes), so the app cannot read that PDF directly.
+
+Loan payments found in a statement are added as expenses. They do not change a loan balance. Use **Record payment** on the Loans page for that.
 
 ## Loans and payoff plan
 
